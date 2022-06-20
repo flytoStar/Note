@@ -1,3 +1,5 @@
+package data;
+
 /**
  * @author flystar
  * @date 2022/6/20  16:00
