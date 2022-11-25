@@ -1,0 +1,162 @@
+# Spark
+
+### RDD
+
+RDD是Spark中最小的数据处理模型，其中封装着计算逻辑
+
+RDD**体现了装饰者设计模式**
+
+在yarn环境中，spark通过申请资源来创建调度节点（Driver）和计算节点（Excutor），Spark框架根据需求将计算逻辑根据分区根据分区划分成不同的任务，每个分区的任务都会交由一个Excutor处理计算，调度节点将任务根据计算节点状态大送到对应的计算节点进行计算。
+
+**注意**：Driver并非 直接连接resourcemanager，而是通过application间接通信申请资源，以达到解耦的目的
+
+![image-20220519230837676](F:\Atguigu\04_Note\文档\MDpng\image-20220519230837676.png)
+
+
+
+### RDD算子
+
+数据都用用扁平化flatmap，取一部分用map
+
+分区目的：切分数据规模
+
+**map 和 mappartitions** 比较：
+
+​	1.  性能： mappartitions更好
+
+​	2. 功能 ： mappartitions 是全量操作，没有数据量约束
+
+​	3. 原理上 ： mappartiitoins 会受到硬件环境影响
+​	！！此算子返回迭代器
+​				
+
+**mappartitionswithindex()** 参数：(index,ite) => (ite)	
+
+**所有含有shuffle阶段的算子都有改变分区的能力（但是能改变分区不一定有shuffle阶段）**
+
+含有shuffle的算子： groupby      groupbykey   reducebykey   repartition
+
+**distinct** 有shuffle 阶段，因为底层使用了reducebykey() , 对元组有聚合操作
+
+​				deistinct 有改变分区的能力
+
+**sample:** 第一个参数为如果为true ，采集数据后，数据返回到数据集中，可以重复采集
+
+​									如果为false ， 采集数据后数据不会返回到数据集中，不会被重复采集
+
+​				第二个参数  如果数据会重复采集，参数表示预计被重复采集的次数，
+
+​									如果数据不会重复采集，参数表示每个数据被抽取的概率
+
+**coalesce**默认缩减分区不采用shuffle，缩减分区数据会不均衡，因为缩减分区是考虑分区的位置（比如缩减后数据是否跨节点或跨机架），不考虑数据量；
+
+传入第二个参数true 后开启使用shuffle，会使数据均衡，但是数据会被打乱
+**注意：** 缩减分区用coalesce ，扩大分区用repartition , reaprtition默认开启shuffle
+
+**partitionBy**默认分区规则是哈希分区规则，按照key的哈希值和分区数取余进入分区	
+
+​			partitionBy 是重新定义分区规则
+
+​			repartition 是重新设定分区数		
+
+​			partitionBy多次执行时，如果分区规则一样，则不起作用
+
+**GroupByKey** 按照key作为分组标记   groupby需要自定义分组标记
+
+**sortBy:**
+
+![image-20220520085659887](F:\Atguigu\04_Note\文档\MDpng\image-20220520085659887.png)
+
+**reducebykey**
+
+**shuffle的优化**：
+
+-更换性能更好的磁盘
+
+-增加更大的缓冲区
+
+-保证数据结果不变的情况下，落盘次数越少，性能越好
+
+-保证数据结果不变的情况下，落盘的数据越少，性能越好
+
+
+
+**aggregateByKey**(计算的初始值)(分区**内**相同key的数据两两聚合规则**，**分区**间**相同key的数据两两聚合规则)
+
+​		当分区内和分区间聚合规则相同时，可以简化为foldByKey(计算的初始值)(相同key的数据两两聚合规则)
+
+**combineByKey**(key对应的第一个value转换规则，分区**内**相同key的数据计算规则，分区**间**相同key的数据计算规则)
+
+补充： 函数形参的参数列表必须是值类型，combineByKey是按照Key处理数据，Wordcount实例：
+
+![image-20220519163102828](F:\Atguigu\04_Note\文档\MDpng\combineBykey.png)
+
+
+
+**sortByKey**： 如果key非数值型对象，那么该对象必须继承Ordered特质才能使用sortByKey
+
+join函数与拉链的区别： join可以把相同key 的集合的value聚合在一起，与顺序无关，拉链是按照顺序的
+
+**另外**，join函数可能会产生笛卡尔积，并可能伴随shuffle阶段，所以性能比较cha
+
+### 关于行动算子
+
+行动算子返回具体的内容，会触发job，转换算子返回RDD，不会触发job（sortBy会触发job，但不是行动算子）
+
+collect( ) 不传参数，是行动算子，返回数组，这个数组在Driver端声明的，collect( ) 会将不同excutor的数据拉取到Driver
+
+**算子外部代码在Driver端运行，内部代码在excutor端执行；** 
+
+![image-20220519231855140](F:\Atguigu\04_Note\文档\MDpng\image-20220519231855140.png)
+
+​									
+
+### 累加器
+
+-Driver端声明的变量会被Excutor拉取到本地，但是Excutor执行结果不会发送到Driver端
+
+-转换算子无法执行累加器，只有行动算子可以执行累加器
+
+-行动算子多次执行，累加器的结果会被叠加
+
+-累加器的结果是单点操作，所以无法执行分布式操作计算，会影响性能
+
+
+
+map  将处理的数据逐条进行映射转换  一维一对一的映射
+
+flatmap 可以把二维的数据映射转换成一维
+
+mapPartitions   将待处理的数据以分区为单位发送到计算节点进行处理
+
+mapPartitionsWithIndex  将待处理的数据以分区为单位发送到计算节点进行处理，在处理时同时可以获取当前分区索引
+
+ groupBy   将数据根据指定的规则进行分组
+
+ filter  将数据根据指定的规则进行筛选过滤
+
+distinct   将数据集中重复的数据去重
+
+coalesce  改变分区数，根据传参决定是否shuffle   减少分区使用
+
+repartition  改变分区数，会发生shuffle，增加分区使用
+
+union   对源RDD和参数RDD求并集后返回一个新的RDD
+
+
+
+
+
+collect——作用是所有元素以数组格式返回
+
+aggregate——每个分区里面的元素进行聚合
+
+count——计算元素个数
+
+first——获取首个元素
+
+take——获取前n个元素
+
+glom——返回分区情况
+
+reduce----聚合所有元素

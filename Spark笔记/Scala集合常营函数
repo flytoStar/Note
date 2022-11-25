@@ -1,0 +1,38 @@
+数组增加元素：append（）
+
+List增加元素：append（）
+
+set增加元素 ：add（）
+
+map增加元素 ： put( )
+
+queue增加 ： enqueue( )
+	 清退： dequeue( )
+
+集合函数    ：head（）获取头尾
+			  tail()  非偷得都是尾
+			  last（）最后一个数据
+			  init（）初始数据
+			  reverse（）反转
+			  take（）取前后n个数据
+			  takeRight（）
+			  drop（）去电前后nge 数据
+			  dropRight（）
+			  union() 并集
+			  intersect（）交集
+			  diff() 差集
+			  zip() 拉链
+			  sliding() 滑窗
+			  product（） 乘积
+			  sortedby() 正序
+			  sortedby（）.reverse() 倒序
+			  sortWith（） 自定义排序
+			  filter（） 过滤
+			  map（） 映射
+			  flatten（） 扁平化
+			  flatmap() 映射并扁平化
+			  groupby（） 分组
+			  reduce（） 归约（也叫自定义聚合）
+			  fold ()() 折叠，科里化
+		内部参数不能用下划线代替，
+		化简至下划线后不能嵌套函数
